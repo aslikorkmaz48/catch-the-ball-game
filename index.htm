@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gelişmiş Top Yakalama Oyunu</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        
+        canvas {
+            background: #222;
+            border: 2px solid #0f0;
+            display: block;
+        }
+        
+        #controls {
+            margin: 10px;
+        }
+        
+        button {
+            margin: 0 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="game" width="400" height="400"></canvas>
+    <h2 id="score">Skor: 0 | Can: 3 | En Yüksek Skor: 0</h2>
+    <div id="controls">
+        <button id="startBtn">Başlat</button>
+        <button id="stopBtn">Durdur</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const scoreText = document.getElementById("score");
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+
+        let basket = {
+            x: 170,
+            y: 360,
+            width: 60,
+            height: 20
+        };
+        let balls = [];
+        let score = 0;
+        let lives = 3;
+        let highScore = localStorage.getItem("highScore") || 0;
+        let game;
+        let isRunning = false;
+
+        // Ses efekti
+        const catchSound = new Audio("https://freesound.org/data/previews/82/82673_1022653-lq.mp3");
+
+        // Yeni top ekle
+        function addBall() {
+            balls.push({
+                x: Math.random() * 380,
+                y: 0,
+                radius: 10,
+                speed: 2 + Math.random() * 3
+            });
+        }
+
+        // Çizim fonksiyonları
+        function drawBasket() {
+            ctx.fillStyle = "lime";
+            ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+        }
+
+        function drawBalls() {
+            balls.forEach(ball => {
+                ctx.fillStyle = "red";
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBasket();
+            drawBalls();
+
+            balls.forEach((ball, index) => {
+                ball.y += ball.speed;
+
+                // Yakalama kontrolü
+                if (ball.y + ball.radius >= basket.y &&
+                    ball.x >= basket.x &&
+                    ball.x <= basket.x + basket.width) {
+                    score++;
+                    catchSound.play();
+                    balls.splice(index, 1);
+                    addBall();
+                }
+
+                // Top düştü mü?
+                if (ball.y > canvas.height) {
+                    balls.splice(index, 1);
+                    lives--;
+                    addBall();
+                }
+            });
+
+            scoreText.innerText = `Skor: ${score} | Can: ${lives} | En Yüksek Skor: ${highScore}`;
+
+            if (lives <= 0) {
+                alert("Oyun Bitti! Skor: " + score);
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", highScore);
+                }
+                stopGame();
+            }
+
+            if (isRunning) requestAnimationFrame(update);
+        }
+
+        // Oyun kontrol
+        function startGame() {
+            if (isRunning) return;
+            isRunning = true;
+            score = 0;
+            lives = 3;
+            balls = [];
+            for (let i = 0; i < 3; i++) addBall();
+            update();
+        }
+
+        function stopGame() {
+            isRunning = false;
+        }
+
+        // Sepeti fare ile hareket ettirme
+        canvas.addEventListener("mousemove", function(e) {
+            const rect = canvas.getBoundingClientRect();
+            basket.x = e.clientX - rect.left - basket.width / 2;
+            if (basket.x < 0) basket.x = 0;
+            if (basket.x + basket.width > canvas.width) basket.x = canvas.width - basket.width;
+        });
+
+        startBtn.addEventListener("click", startGame);
+        stopBtn.addEventListener("click", stopGame);
+    </script>
+</body>
+
+</html>
